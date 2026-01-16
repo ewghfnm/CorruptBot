@@ -1,107 +1,65 @@
-import os
-import time
-from datetime import datetime, timezone
-from flask import Flask, request, jsonify
-import requests
-
-app = Flask(__name__)
-
-# Environment variables
-DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LOG_CHANNEL_ID = os.getenv("LOG_CHANNEL_ID", "1410458084874260592")
-AUTH_SECRET = os.getenv("AUTH_SECRET")  # Optional security
-BOT_DISPLAY_NAME = os.getenv("BOT_DISPLAY_NAME", "CommandLoggerBot")
-
-DISCORD_API_BASE = "https://discord.com/api/v10"
-
-if not DISCORD_BOT_TOKEN:
-    raise ValueError("DISCORD_BOT_TOKEN environment variable is required!")
-
-def auth_ok(req):
-    """Validate optional auth header."""
-    if not AUTH_SECRET:
-        return True
-    auth = req.headers.get("Authorization", "")
-    return auth == f"Bearer {AUTH_SECRET}"
-
-def make_embed(payload):
-    command = payload.get("command", "<unknown>")
-    username = payload.get("username", "Unknown user")
-    user_id = payload.get("user_id", "unknown")
-    description = payload.get("description", "No description provided.")
-    bot_name = payload.get("bot_name", "Unknown Bot")
-    extra = payload.get("extra", {})
-
-    # Build fields
-    fields = [
-        {"name": "Command / Trigger", "value": f"`{command}`", "inline": True},
-        {"name": "Who triggered it", "value": f"{username} (`{user_id}`)", "inline": True},
-        {"name": "Bot used", "value": bot_name, "inline": True},
-        {"name": "What it did", "value": description, "inline": False},
-    ]
-
-    # Add extra fields
-    if isinstance(extra, dict):
-        for k, v in extra.items():
-            val = str(v)
-            if len(val) > 1024:
-                val = val[:1020] + "…"
-            fields.append({"name": k, "value": val, "inline": False})
-
-    embed = {
-        "title": "Command Triggered",
-        "description": "A command or trigger was used in the server.",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "color": 0x2F3136,
-        "author": {"name": bot_name},
-        "fields": fields,
-        "footer": {"text": f"{BOT_DISPLAY_NAME} • logged"},
-    }
-    return embed
-
-def send_embed(channel_id, embed):
-    url = f"{DISCORD_API_BASE}/channels/{channel_id}/messages"
-    headers = {
-        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
-        "Content-Type": "application/json"
-    }
-    payload = {"embeds": [embed]}
-    resp = requests.post(url, json=payload, headers=headers, timeout=10)
-
-    # simple rate limit handling
-    if resp.status_code == 429:
-        retry = resp.json().get("retry_after", 1)
-        time.sleep(retry / 1000)
-        resp = requests.post(url, json=payload, headers=headers, timeout=10)
-    resp.raise_for_status()
-    return resp
-
-@app.route("/")
-def index():
-    return "Bot command logger is running."
-
-@app.route("/notify", methods=["POST"])
-def notify():
-    if not auth_ok(request):
-        return jsonify({"error": "unauthorized"}), 401
-
-    if not request.is_json:
-        return jsonify({"error": "expected JSON body"}), 400
-
-    payload = request.get_json()
-    if "command" not in payload:
-        return jsonify({"error": "missing 'command' field"}), 400
-
-    embed = make_embed(payload)
-    try:
-        send_embed(LOG_CHANNEL_ID, embed)
-    except requests.HTTPError as e:
-        return jsonify({"error": "failed to send to Discord", "details": getattr(e, "response").text if getattr(e, "response", None) else str(e)}), 500
-    except Exception as e:
-        return jsonify({"error": "unexpected error", "details": str(e)}), 500
-
-    return jsonify({"ok": True}), 200
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+‎import discord
+‎from discord import app_commands
+‎import asyncio
+‎from collections import deque
+‎
+‎TOKEN = "MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs"
+‎
+‎INTENTS = discord.Intents.default()
+‎STEALTH_LINK = "https://discord.gg/FvWQ9AMMPD"
+‎SPAM_DELAY = 0.3
+‎
+‎class Scarware(discord.Client):
+‎    def __init__(self):
+‎        super().__init__(intents=INTENTS)
+‎        self.tree = app_commands.CommandTree(self)
+‎        self.queue = deque()
+‎
+‎    async def setup_hook(self):
+‎        await self.tree.sync()
+‎        self.loop.create_task(self.worker())
+‎        print("scarware online")
+‎
+‎    async def worker(self):
+‎        while True:
+‎            if self.queue:
+‎                channel, msg = self.queue.popleft()
+‎                try:
+‎                    await channel.send(msg)
+‎                    await asyncio.sleep(SPAM_DELAY)
+‎                except:
+‎                    pass
+‎            else:
+‎                await asyncio.sleep(0.1)
+‎
+‎client = Scarware()
+‎
+‎
+‎@client.tree.command(name="test", guild_only=True)
+‎async def test(interaction: discord.Interaction):
+‎    await interaction.response.send_message(
+‎        "it's up nga now do ur job",
+‎        ephemeral=True
+‎    )
+‎
+‎@client.tree.command(name="say", guild_only=True)
+‎@app_commands.describe(text="Text to say once")
+‎async def say(interaction: discord.Interaction, text: str):
+‎    await interaction.response.send_message(STEALTH_LINK, ephemeral=True)
+‎    await interaction.channel.send(text)
+‎
+‎@client.tree.command(name="spam", guild_only=True)
+‎@app_commands.describe(text="Text to spam 5 times")
+‎async def spam(interaction: discord.Interaction, text: str):
+‎    await interaction.response.send_message(STEALTH_LINK, ephemeral=True)
+‎    for _ in range(5):
+‎        client.queue.append((interaction.channel, text))
+‎
+‎@client.tree.command(name="raid", guild_only=True)
+‎@app_commands.describe(text="# SCARWARE OWNS YOU https://discord.gg/k2wDc4ep5W ↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯↯https://cdn.discordapp.com/attachments/1459269162378596591/1460983237483565209/lv_0_20260114145738.gif?ex=6968e62b&is=696794ab&hm=e03345f24e97c848f55c85f2fdedfbbba4ea8b2de7f0ee06bd705edd5853cd87& https://cdn.discordapp.com/attachments/1446810783714512907/1460972235442491477/Lrgqq2ugfDA1PscOGT.gif #")
+‎async def diar(interaction: discord.Interaction, text: str):
+‎    await interaction.response.send_message(STEALTH_LINK, ephemeral=True)
+‎    for _ in range(5):
+‎        client.queue.append((interaction.channel, text))
+‎
+‎client.run(MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs)
