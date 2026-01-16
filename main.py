@@ -3,7 +3,7 @@
 ‎import asyncio
 ‎from collections import deque
 ‎
-‎TOKEN = ""
+‎TOKEN = "MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs"
 ‎
 ‎INTENTS = discord.Intents.default()
 ‎STEALTH_LINK = "https://discord.gg/FvWQ9AMMPD"
@@ -62,4 +62,4 @@
 ‎    for _ in range(5):
 ‎        client.queue.append((interaction.channel, text))
 ‎
-‎client.run()
+‎client.run(MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs)
