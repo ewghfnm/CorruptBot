@@ -62,4 +62,4 @@
 ‎    for _ in range(5):
 ‎        client.queue.append((interaction.channel, text))
 ‎
-‎client.run(MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs)
+‎client.run()
