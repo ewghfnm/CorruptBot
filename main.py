@@ -3,7 +3,7 @@
 ‎import asyncio
 ‎from collections import deque
 ‎
-‎TOKEN = "MTQ2MTU0NTUxMDAyMzMzNjAyOQ.GW5w46.ggfJI1YW8Sg9DxaM8QN3wBFKemoMdDnfB3whYs"
+‎TOKEN = ""
 ‎
 ‎INTENTS = discord.Intents.default()
 ‎STEALTH_LINK = "https://discord.gg/FvWQ9AMMPD"
