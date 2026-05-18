@@ -1,195 +1,139 @@
-# Pet Legends X
+# Pet Legends X — 3-File Setup
 
-A pet simulator MVP for Roblox: pets, eggs, hatching, worlds, breakables, currency, rebirth, gamepasses, full admin panel.
-
-> **Status:** Working MVP foundation, not a finished game. See "What's included / what's not" below.
+A Roblox pet simulator MVP packed into just **3 files**. No folders, no nesting, no Rojo. Paste, play.
 
 ---
 
-## Project layout
+## Files
 
-```
-PetLegendsX/
-├── default.project.json        # Rojo project (maps folders -> Roblox services)
-├── src/
-│   ├── shared/                 # -> ReplicatedStorage.Shared (ModuleScripts)
-│   │   ├── Config.lua
-│   │   ├── Rarities.lua        # Common -> Huge -> Admin
-│   │   ├── PetDatabase.lua     # All pets, including 6 Huge pets
-│   │   ├── EggDatabase.lua     # Egg pools + hugeChance
-│   │   ├── WorldDatabase.lua   # 12 worlds
-│   │   ├── GamepassDatabase.lua# Replace IDs with your real gamepass IDs
-│   │   ├── EnchantDatabase.lua
-│   │   ├── Remotes.lua
-│   │   ├── Util.lua
-│   │   └── Signal.lua
-│   ├── server/                 # -> ServerScriptService.Server
-│   │   ├── init.server.lua     # Boot script (Script)
-│   │   ├── DataService.lua     # DataStore + autosave + session save
-│   │   ├── CurrencyService.lua
-│   │   ├── PetService.lua      # Inventory, equip, level, stat compute
-│   │   ├── EggService.lua      # Hatching, pity, mutations, Huge rolls
-│   │   ├── BreakingService.lua # Spawns breakables, handles damage
-│   │   ├── RebirthService.lua
-│   │   ├── GamepassService.lua # Real MarketplaceService + admin grant
-│   │   ├── AdminService.lua    # All admin commands (server-validated)
-│   │   └── AnnouncementService.lua
-│   └── client/                 # -> StarterPlayer.StarterPlayerScripts.Client
-│       ├── init.client.lua     # Boot (LocalScript)
-│       ├── HUD.lua
-│       ├── EggUI.lua
-│       ├── InventoryUI.lua
-│       ├── WorldsUI.lua
-│       ├── RebirthUI.lua
-│       ├── ShopUI.lua
-│       ├── AdminUI.lua         # Visible only to admins
-│       ├── HatchAnimation.lua
-│       ├── Notifications.lua
-│       ├── PlayerData.lua
-│       ├── PetFollow.lua
-│       ├── Breaking.lua
-│       └── UIBuilder.lua
-```
+| File | Where it goes | What kind of script |
+|------|---------------|---------------------|
+| `PetLegendsX_Shared.lua` | `ReplicatedStorage` | **ModuleScript** named `PetLegendsX_Shared` |
+| `PetLegendsX_Server.lua` | `ServerScriptService` | **Script** (regular Script) |
+| `PetLegendsX_Client.lua` | `StarterPlayer` → `StarterPlayerScripts` | **LocalScript** |
 
 ---
 
-## Setup option A — Rojo (recommended)
+## Setup steps
 
-Rojo syncs files on disk into Roblox Studio.
+### 1. Open Roblox Studio
+Open a new place (or your existing one).
 
-1. Install Rojo: https://rojo.space/docs/v7/getting-started/installation/
-   - Roblox Studio plugin **and** the `rojo` CLI (or VS Code extension).
-2. In a terminal, from the `PetLegendsX/` folder:
-   ```bash
-   rojo serve
+### 2. Enable API services
+**File → Game Settings → Security:**
+- Turn ON **Enable Studio Access to API Services** (so DataStore works while testing)
+
+### 3. Create the Shared module
+1. In Explorer, right-click `ReplicatedStorage` → **Insert Object** → **ModuleScript**
+2. Rename it to **exactly** `PetLegendsX_Shared` (this name matters!)
+3. Open it, delete the default code, and paste the entire contents of `PetLegendsX_Shared.lua`
+4. **Before saving**, find this section near the top:
+   ```lua
+   ADMIN_USERNAMES = {
+       -- "YourRobloxUsername",
+   },
    ```
-3. In Studio, open a new place. Open the Rojo plugin, click **Connect**.
-4. Press Play. The HUD, eggs, breakables and admin (if you're listed) all show up.
+   Uncomment the line and replace with your Roblox username (or add your UserId to `ADMIN_USER_IDS` instead). Save.
+
+### 4. Create the Server script
+1. Right-click `ServerScriptService` → **Insert Object** → **Script**
+2. Name it whatever you want (e.g. `PetLegendsX_Server`)
+3. Open it, delete the default code, paste `PetLegendsX_Server.lua`. Save.
+
+### 5. Create the Client script
+1. In Explorer, expand `StarterPlayer` → right-click `StarterPlayerScripts` → **Insert Object** → **LocalScript**
+2. Name it whatever you want (e.g. `PetLegendsX_Client`)
+3. Open it, delete the default code, paste `PetLegendsX_Client.lua`. Save.
+
+### 6. Press Play
+You should see:
+- HUD at the top with Coins / Gems / Rebirths
+- Side buttons: **Pets**, **Eggs**, **Worlds**, **Rebirth**, **Shop**
+- Orange breakable crates spawning across worlds
+- (If you set yourself as admin) an **ADMIN** button on the side, or press **F4**
 
 ---
 
-## Setup option B — Manual (no tools needed)
+## Quick controls
 
-If you don't want to install Rojo, recreate this structure by hand in Studio.
-
-### 1. Create the folders/scripts
-
-**ReplicatedStorage:**
-- Add a `Folder` named `Shared`.
-- Inside `Shared`, add a `ModuleScript` for each file in `src/shared/` (same name, paste contents).
-
-**ServerScriptService:**
-- Add a `Folder` named `Server`.
-- Inside `Server`, add a regular `Script` named `init` and paste the contents of `src/server/init.server.lua`.
-- For every other file in `src/server/`, add a `ModuleScript` with the same name.
-
-**StarterPlayer > StarterPlayerScripts:**
-- Add a `Folder` named `Client`.
-- Inside `Client`, add a `LocalScript` named `init` and paste the contents of `src/client/init.client.lua`.
-- For every other file in `src/client/`, add a `ModuleScript` with the same name.
-
-### 2. Enable required Studio settings
-
-- **Game Settings > Security > Allow HTTP Requests:** ON (DataStore safety).
-- **Game Settings > Security > Enable Studio Access to API Services:** ON (so DataStore works in Studio).
-
-### 3. Test
-
-- Press Play. You should see the HUD, breakable crates spawning, the egg menu, etc.
-
----
-
-## Configuring it
-
-### Become an admin
-
-Edit `src/shared/Config.lua`:
-```lua
-Config.ADMIN_USER_IDS = { 1234567890 }       -- your Roblox UserId
-Config.ADMIN_USERNAMES = { "YourUsername" }  -- or your Roblox username
-```
-When you join, an `ADMIN` button appears on the side, or press **F4**.
-
-### Hook up real gamepasses
-
-Edit `src/shared/GamepassDatabase.lua`. Each entry has `id = 0`. Create gamepasses on the Roblox creator dashboard and paste each gamepass ID in.
-
-### Tune the economy
-
-`src/shared/Config.lua`:
-- `STARTING_COINS`, `STARTING_GEMS`
-- `PITY_LEGENDARY_AFTER`, `PITY_MYTHICAL_AFTER`
-- `REBIRTH_BASE_COST`, `REBIRTH_COST_SCALE`, `REBIRTH_MULTIPLIER`
-
-`src/shared/EggDatabase.lua`:
-- `cost`, `pets[]` weights, `hugeChance` (default 1 in 5,000,000)
-
-`src/shared/PetDatabase.lua`:
-- Add as many pets as you want. Just give each a unique `id`.
-
-### Add visual pet models (optional)
-
-By default, equipped pets are rendered as colored neon parts orbiting the player.
-To use real models:
-1. In `ReplicatedStorage`, add a `Folder` named `PetModels`.
-2. For each pet `id` in `PetDatabase.lua`, add a `Model` named exactly the same id (e.g. `meadow_dog`). Make sure each model has a `PrimaryPart`.
-3. The client will automatically clone that model instead of using the placeholder part.
+| Action | How |
+|--------|-----|
+| Break crates | Stand near them — pets attack automatically |
+| Hatch egg | Open **Eggs** menu, click Hatch 1 / Hatch 3 / Auto |
+| Equip pet | Open **Pets**, click **Equip** on a card |
+| Unlock world | Open **Worlds**, click **Unlock** (need coins + rebirth count) |
+| Rebirth | Open **Rebirth**, click button (resets coins+worlds, gives multiplier) |
+| Buy gamepass | Open **Shop**, click price (only works after you set real gamepass IDs) |
+| Open admin panel | Click side **ADMIN** button or press **F4** |
 
 ---
 
 ## Admin panel — what it does
 
-Open with the side button or **F4**. All actions hit `AdminService` on the server, which validates that the sender is in `ADMIN_USER_IDS` / `ADMIN_USERNAMES`. Clients can't spoof.
+All commands are **server-validated** (clients can't spoof). Open with the **ADMIN** side button or **F4**.
 
 - **Currency:** Give/Set Coins, Give/Set Gems
-- **Give Pet:** by `petId` + tier (Standard/Golden/Rainbow/DarkMatter) + optional mutation
+- **Give Pet:** by `petId` (e.g. `meadow_dog`) + tier (`Standard`/`Golden`/`Rainbow`/`DarkMatter`) + optional mutation
 - **Quick Huge buttons** for each Huge pet
-- **Force Hatch:** by egg id + count
-- **Gamepasses:** Grant or Revoke any gamepass key (works without paying Robux)
+- **Force Hatch** any egg, any number of times
+- **Gamepasses:** Grant or Revoke any gamepass without paying Robux
 - **Set Rebirths**, **Unlock All Worlds**, **Announce**, **Kick**
 
-Target field: leave blank for yourself, or enter a Roblox username/UserId.
+The `Target` field at the top lets you target another player by Username or UserId. Leave it blank to target yourself.
 
 ---
 
 ## What's included
 
-- 60+ pets across 12 worlds, including 6 **Huge** pets
+- 60+ pets across 12 worlds
 - 11 rarities: Common, Uncommon, Rare, Epic, Legendary, Mythical, Secret, Divine, Exclusive, **Huge**, Admin
-- Eggs with weighted RNG, pity guarantees, Lucky gamepass multipliers
+- 6 Huge pets (1 in 5,000,000 chance)
+- Eggs with weighted RNG, pity guarantees, lucky multipliers
 - Mutations (1% roll: shiny / glowing / corrupted / celestial / void / infernal)
 - Tiers: Standard / Golden (2x) / Rainbow (5x) / DarkMatter (10x)
-- Pet leveling (XP from breaking) with stat scaling
-- World unlocks gated by coins + rebirth count
-- Rebirth system with permanent multiplier
+- Pet leveling from breaking
+- Rebirth with permanent multiplier, world unlock progression
 - Server-wide announcements on rare/Huge hatches
-- Auto-hatch (gamepass), Triple-hatch (gamepass), Extra Equip (gamepass), Lucky / Ultra Lucky, VIP, Faster Walk
-- DataStore save with autosave + BindToClose protection
-- HUD, Eggs UI, Pets UI, Worlds UI, Rebirth UI, Shop UI, Admin UI
+- DataStore saving with autosave + shutdown protection
+- Auto-hatch, Triple-hatch, Lucky x2, Extra Equip, VIP, Faster Walk gamepass framework
+- Full HUD + Eggs/Pets/Worlds/Rebirth/Shop/Admin UI
 - Hatch reveal animation
-- Notifications + server announce toasts
 - Equipped pets visually orbit the player
 
-## What's NOT included (TODO for a full game)
+---
 
-These are intentional scope cuts so the core is solid first. Each is straightforward to add on top:
-- Trading & marketplace (needs careful anti-scam UX + server validation)
+## Customizing
+
+All editing happens in `PetLegendsX_Shared` (just open the ModuleScript in Studio):
+
+- **Become admin:** `Config.ADMIN_USER_IDS` or `Config.ADMIN_USERNAMES`
+- **Tune balance:** `Config.PITY_*`, `Config.REBIRTH_*`, `Config.STARTING_*`
+- **Hook real gamepasses:** `GamepassDatabase` — replace each `id = 0` with your real gamepass ID
+- **Add/edit pets:** `PetDatabase.List` — just add new entries with unique `id`
+- **Add/edit eggs:** `EggDatabase.List`
+- **Add/edit worlds:** `WorldDatabase.List`
+- **Add custom pet models:** create a Folder named `PetModels` in `ReplicatedStorage`, put a Model inside named exactly the pet's `id` (e.g. `meadow_dog`), with a `PrimaryPart` set. The client will use it automatically.
+
+---
+
+## What's NOT included (TODO if you want them later)
+
+These were intentionally cut to keep scope tight. Each can be layered on top without rewriting the core:
+- Trading & marketplace
 - Clans / clan boss raids
-- Quests (daily / weekly / story)
-- Achievements / titles
+- Quests / achievements / titles
 - AFK zone, login streaks, hourly merchant
-- Fusion (5 pets -> upgraded version)
-- Enchant rolling/applying mechanics (data structure exists in PetService stat calc)
-- Built world maps (the breakable spawner makes simple boxes; replace with real builds)
-- Sound design and full VFX
+- Fusion (5 pets → upgraded version)
+- Real built world maps (the spawner places simple boxes for each world)
+- Sound design / full VFX
 - Anti-exploit hardening beyond per-player rate limiting
 - Mobile-tuned UI tweaks
 
 ---
 
-## Notes & gotchas
+## Common gotchas
 
-- DataStore only works in real Studio sessions with API Services enabled, or in-game. In offline mode the save is silently skipped.
-- The breakable spawner places simple parts at `(worldOrder * 200, 5, 0)` so each world is offline-testable. Replace `BreakingService.makeBreakable` calls with real placed Models in production.
-- `Remotes.IsAdmin` is invoked once at client boot; if you change `Config.ADMIN_USER_IDS` you'll need to rejoin to get the admin button.
-- All server logic uses player data through `DataService:Get(player)`; never write to that table from outside services without calling `DataService:MarkDirty`.
+- **DataStore won't save in Studio?** Make sure *Enable Studio Access to API Services* is on in Game Settings.
+- **No admin button?** Did you put your username in `ADMIN_USERNAMES` (case-insensitive) **before** pressing Play? You need to rejoin after editing.
+- **Gamepass buttons say "Set ID in DB!"?** That's intentional — the placeholder `id = 0` won't open Roblox's purchase prompt. Replace with real IDs from the creator dashboard.
+- **The 3 names matter:** `PetLegendsX_Shared` is referenced by both other scripts via `WaitForChild("PetLegendsX_Shared")`. If you rename it, update both other files.
