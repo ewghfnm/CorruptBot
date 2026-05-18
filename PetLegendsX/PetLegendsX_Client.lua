@@ -579,7 +579,7 @@ end
 -- BREAKING (auto-attack closest breakable)
 -- =============================================================
 local HIT_INTERVAL = 0.15
-local MAX_RANGE = 18
+local MAX_RANGE = 24
 local lastBreakHit = 0
 RunService.Heartbeat:Connect(function()
     local now = os.clock()
@@ -672,3 +672,50 @@ LocalPlayer.CharacterRemoving:Connect(function()
 end)
 
 print("[PetLegendsX] Client booted.")
+
+-- =============================================================
+-- TELEPORTER & EGG VENDOR INTERACTION
+-- =============================================================
+local TELEPORT_COOLDOWN = 3
+local lastTeleport = 0
+local lastVendorHatch = 0
+local VENDOR_HATCH_COOLDOWN = 0.6
+
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local now = os.clock()
+
+    local worldsFolder = Workspace:FindFirstChild("PetLegendsX_Worlds")
+    if not worldsFolder then return end
+
+    -- Quick check using simple distance to pads
+    for _, worldModel in ipairs(worldsFolder:GetChildren()) do
+        for _, child in ipairs(worldModel:GetChildren()) do
+            if child:IsA("BasePart") then
+                if string.sub(child.Name, 1, 9) == "Teleport_" then
+                    if now - lastTeleport > TELEPORT_COOLDOWN then
+                        if (child.Position - hrp.Position).Magnitude < 6 then
+                            local target = child:FindFirstChild("TargetWorld")
+                            if target then
+                                lastTeleport = now
+                                Remotes.TeleportToWorld:FireServer(target.Value)
+                            end
+                        end
+                    end
+                elseif string.sub(child.Name, 1, 11) == "EggVendor_" then
+                    if now - lastVendorHatch > VENDOR_HATCH_COOLDOWN then
+                        if (child.Position - hrp.Position).Magnitude < 6 then
+                            local eggIdVal = child:FindFirstChild("EggId")
+                            if eggIdVal then
+                                lastVendorHatch = now
+                                Remotes.HatchEgg:FireServer(eggIdVal.Value, 1)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)

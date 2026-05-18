@@ -62,6 +62,10 @@ Shared.Config = {
     DATASTORE_NAME = "PetLegendsX_Save_v1",
     AUTOSAVE_INTERVAL = 60,
     AUTO_HATCH_INTERVAL = 1.0,
+
+    -- World layout
+    WORLD_SIZE = 250,    -- size of each world's baseplate (square)
+    WORLD_SPACING = 400, -- distance between world centers
 }
 
 -- =============================================================
@@ -158,18 +162,30 @@ end
 -- =============================================================
 Shared.WorldDatabase = {
     List = {
-        {id="Meadow",  name="Spawn Meadow",   unlockCost=0,      coinMultiplier=1,    rebirthRequired=0},
-        {id="Candy",   name="Candy Kingdom",  unlockCost=25000,  coinMultiplier=5,    rebirthRequired=0},
-        {id="Cyber",   name="Cyber City",     unlockCost=5e6,    coinMultiplier=25,   rebirthRequired=0},
-        {id="Volcano", name="Volcano Core",   unlockCost=5e8,    coinMultiplier=100,  rebirthRequired=1},
-        {id="Ocean",   name="Ocean Paradise", unlockCost=5e10,   coinMultiplier=500,  rebirthRequired=2},
-        {id="Frozen",  name="Frozen Peaks",   unlockCost=5e12,   coinMultiplier=2500, rebirthRequired=3},
-        {id="Egypt",   name="Ancient Egypt",  unlockCost=5e14,   coinMultiplier=1e4,  rebirthRequired=5},
-        {id="Space",   name="Space Station",  unlockCost=5e16,   coinMultiplier=5e4,  rebirthRequired=8},
-        {id="Samurai", name="Samurai World",  unlockCost=5e18,   coinMultiplier=2e5,  rebirthRequired=12},
-        {id="Heaven",  name="Heaven Realm",   unlockCost=5e20,   coinMultiplier=1e6,  rebirthRequired=18},
-        {id="Void",    name="Void Realm",     unlockCost=5e22,   coinMultiplier=5e6,  rebirthRequired=25},
-        {id="Cosmic",  name="Cosmic Infinity",unlockCost=5e24,   coinMultiplier=2e7,  rebirthRequired=35},
+        {id="Meadow",  name="Spawn Meadow",   unlockCost=0,      coinMultiplier=1,    rebirthRequired=0,
+            theme={ground=Color3.fromRGB(86,180,86),   sky=Color3.fromRGB(120,200,255), groundMat=Enum.Material.Grass,         decorColors={Color3.fromRGB(40,140,40),Color3.fromRGB(180,220,80)}, music=0}},
+        {id="Candy",   name="Candy Kingdom",  unlockCost=25000,  coinMultiplier=5,    rebirthRequired=0,
+            theme={ground=Color3.fromRGB(255,170,210), sky=Color3.fromRGB(255,200,230), groundMat=Enum.Material.SmoothPlastic, decorColors={Color3.fromRGB(255,80,150),Color3.fromRGB(255,255,150),Color3.fromRGB(180,80,255)}, music=0}},
+        {id="Cyber",   name="Cyber City",     unlockCost=5e6,    coinMultiplier=25,   rebirthRequired=0,
+            theme={ground=Color3.fromRGB(30,30,50),    sky=Color3.fromRGB(20,10,40),    groundMat=Enum.Material.Metal,         decorColors={Color3.fromRGB(0,255,200),Color3.fromRGB(255,0,200),Color3.fromRGB(0,150,255)}, music=0}},
+        {id="Volcano", name="Volcano Core",   unlockCost=5e8,    coinMultiplier=100,  rebirthRequired=1,
+            theme={ground=Color3.fromRGB(70,30,30),    sky=Color3.fromRGB(120,30,20),   groundMat=Enum.Material.Slate,         decorColors={Color3.fromRGB(255,80,30),Color3.fromRGB(255,150,30),Color3.fromRGB(120,40,40)}, music=0}},
+        {id="Ocean",   name="Ocean Paradise", unlockCost=5e10,   coinMultiplier=500,  rebirthRequired=2,
+            theme={ground=Color3.fromRGB(240,220,160), sky=Color3.fromRGB(150,220,255), groundMat=Enum.Material.Sand,          decorColors={Color3.fromRGB(0,180,255),Color3.fromRGB(255,180,150),Color3.fromRGB(120,255,200)}, music=0}},
+        {id="Frozen",  name="Frozen Peaks",   unlockCost=5e12,   coinMultiplier=2500, rebirthRequired=3,
+            theme={ground=Color3.fromRGB(220,240,255), sky=Color3.fromRGB(180,210,240), groundMat=Enum.Material.Glacier,       decorColors={Color3.fromRGB(180,220,255),Color3.fromRGB(255,255,255),Color3.fromRGB(120,200,255)}, music=0}},
+        {id="Egypt",   name="Ancient Egypt",  unlockCost=5e14,   coinMultiplier=1e4,  rebirthRequired=5,
+            theme={ground=Color3.fromRGB(230,200,120), sky=Color3.fromRGB(255,200,120), groundMat=Enum.Material.Sand,          decorColors={Color3.fromRGB(220,180,80),Color3.fromRGB(180,140,60),Color3.fromRGB(255,220,100)}, music=0}},
+        {id="Space",   name="Space Station",  unlockCost=5e16,   coinMultiplier=5e4,  rebirthRequired=8,
+            theme={ground=Color3.fromRGB(60,60,80),    sky=Color3.fromRGB(0,0,15),      groundMat=Enum.Material.Metal,         decorColors={Color3.fromRGB(120,120,180),Color3.fromRGB(60,200,255),Color3.fromRGB(255,255,255)}, music=0}},
+        {id="Samurai", name="Samurai World",  unlockCost=5e18,   coinMultiplier=2e5,  rebirthRequired=12,
+            theme={ground=Color3.fromRGB(180,140,80),  sky=Color3.fromRGB(255,200,220), groundMat=Enum.Material.WoodPlanks,    decorColors={Color3.fromRGB(255,180,200),Color3.fromRGB(180,40,40),Color3.fromRGB(60,30,20)}, music=0}},
+        {id="Heaven",  name="Heaven Realm",   unlockCost=5e20,   coinMultiplier=1e6,  rebirthRequired=18,
+            theme={ground=Color3.fromRGB(255,250,220), sky=Color3.fromRGB(255,255,240), groundMat=Enum.Material.Marble,        decorColors={Color3.fromRGB(255,240,180),Color3.fromRGB(255,255,255),Color3.fromRGB(255,220,120)}, music=0}},
+        {id="Void",    name="Void Realm",     unlockCost=5e22,   coinMultiplier=5e6,  rebirthRequired=25,
+            theme={ground=Color3.fromRGB(40,20,60),    sky=Color3.fromRGB(20,0,30),     groundMat=Enum.Material.Slate,         decorColors={Color3.fromRGB(140,40,200),Color3.fromRGB(80,20,120),Color3.fromRGB(200,80,255)}, music=0}},
+        {id="Cosmic",  name="Cosmic Infinity",unlockCost=5e24,   coinMultiplier=2e7,  rebirthRequired=35,
+            theme={ground=Color3.fromRGB(20,20,40),    sky=Color3.fromRGB(0,0,0),       groundMat=Enum.Material.Neon,          decorColors={Color3.fromRGB(255,100,255),Color3.fromRGB(100,200,255),Color3.fromRGB(255,255,100)}, music=0}},
     },
 }
 do
@@ -389,6 +405,7 @@ Shared.Remotes = {
     AdminCommand      = getOrCreate(remotesFolder, "RemoteEvent",    "AdminCommand"),
     RequestBreakHit   = getOrCreate(remotesFolder, "RemoteEvent",    "RequestBreakHit"),
     SetAutoHatch      = getOrCreate(remotesFolder, "RemoteEvent",    "SetAutoHatch"),
+    TeleportToWorld   = getOrCreate(remotesFolder, "RemoteEvent",    "TeleportToWorld"),
     GetPlayerData     = getOrCreate(remotesFolder, "RemoteFunction", "GetPlayerData"),
     IsAdmin           = getOrCreate(remotesFolder, "RemoteFunction", "IsAdmin"),
 }

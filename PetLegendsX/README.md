@@ -59,7 +59,9 @@ You should see:
 | Action | How |
 |--------|-----|
 | Break crates | Stand near them — pets attack automatically |
-| Hatch egg | Open **Eggs** menu, click Hatch 1 / Hatch 3 / Auto |
+| Hatch egg (in-world) | Walk onto an egg vendor pad in any world |
+| Hatch egg (menu) | Open **Eggs** menu, click Hatch 1 / Hatch 3 / Auto |
+| Travel to next world | Walk onto the colored teleporter pad at the edge of any world |
 | Equip pet | Open **Pets**, click **Equip** on a card |
 | Unlock world | Open **Worlds**, click **Unlock** (need coins + rebirth count) |
 | Rebirth | Open **Rebirth**, click button (resets coins+worlds, gives multiplier) |
@@ -85,7 +87,11 @@ The `Target` field at the top lets you target another player by Username or User
 
 ## What's included
 
-- 60+ pets across 12 worlds
+- **12 procedurally-built themed worlds** — each has a baseplate in its theme color/material, decorative props, a giant world-name sign, egg vendor pads, and teleporter pads connecting to neighboring worlds
+- **Egg vendors** — walk onto a vendor pad to auto-hatch that egg every 0.6s
+- **Teleporters** — walk onto a teleporter pad to jump to the next/previous world (only if you've unlocked it)
+- **HP bars** above breakables, themed colors per world
+- 60+ pets across the 12 worlds
 - 11 rarities: Common, Uncommon, Rare, Epic, Legendary, Mythical, Secret, Divine, Exclusive, **Huge**, Admin
 - 6 Huge pets (1 in 5,000,000 chance)
 - Eggs with weighted RNG, pity guarantees, lucky multipliers
@@ -124,7 +130,7 @@ These were intentionally cut to keep scope tight. Each can be layered on top wit
 - Quests / achievements / titles
 - AFK zone, login streaks, hourly merchant
 - Fusion (5 pets → upgraded version)
-- Real built world maps (the spawner places simple boxes for each world)
+- **Hand-built world maps** (the system procedurally generates themed baseplates + decorations + vendors/teleporters; replacing them with hand-built scenery is a builder/artist job)
 - Sound design / full VFX
 - Anti-exploit hardening beyond per-player rate limiting
 - Mobile-tuned UI tweaks

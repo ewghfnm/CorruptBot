@@ -431,6 +431,303 @@ function EggService:Init()
 end
 
 -- =============================================================
+-- WORLD BUILDER (procedural themed maps)
+-- =============================================================
+local WorldBuilder = {}
+
+local function newPart(props, parent)
+    local p = Instance.new("Part")
+    p.Anchored = true
+    p.CanCollide = props.CanCollide ~= false
+    for k, v in pairs(props) do
+        if k ~= "CanCollide" then p[k] = v end
+    end
+    p.Parent = parent
+    return p
+end
+
+local function getWorldCenter(world)
+    return Vector3.new((world.order - 1) * Config.WORLD_SPACING, 0, 0)
+end
+
+function WorldBuilder:GetWorldCenter(worldId)
+    local w = WorldDatabase.GetById(worldId)
+    if not w then return Vector3.new() end
+    return getWorldCenter(w)
+end
+
+-- Build the floor + walls + decorations for one world
+function WorldBuilder:BuildWorld(world, parent)
+    local theme = world.theme or {}
+    local center = getWorldCenter(world)
+    local size = Config.WORLD_SIZE
+
+    local container = Instance.new("Model")
+    container.Name = world.id
+    container.Parent = parent
+
+    -- Ground (large baseplate)
+    newPart({
+        Name = "Ground", Size = Vector3.new(size, 4, size),
+        Position = center - Vector3.new(0, 2, 0),
+        Color = theme.ground or Color3.fromRGB(120,120,120),
+        Material = theme.groundMat or Enum.Material.SmoothPlastic,
+    }, container)
+
+    -- Skybox-ish ambient via SkyDome (a giant inverted sphere segment overhead) - skipped; sky stays default
+
+    -- Decorative walls / fence on edges
+    for _, edge in ipairs({{Vector3.new(0, 6, size/2), Vector3.new(size, 12, 4)},
+                           {Vector3.new(0, 6, -size/2), Vector3.new(size, 12, 4)},
+                           {Vector3.new(size/2, 6, 0), Vector3.new(4, 12, size)},
+                           {Vector3.new(-size/2, 6, 0), Vector3.new(4, 12, size)}}) do
+        newPart({
+            Name = "Wall", Size = edge[2],
+            Position = center + edge[1],
+            Color = theme.ground or Color3.fromRGB(120,120,120),
+            Material = theme.groundMat or Enum.Material.SmoothPlastic,
+            Transparency = 0.3,
+        }, container)
+    end
+
+    -- Big world name billboard at the back
+    do
+        local sign = newPart({
+            Name = "WorldSign", Size = Vector3.new(60, 12, 2),
+            Position = center + Vector3.new(0, 12, -size/2 + 6),
+            Color = theme.decorColors and theme.decorColors[1] or Color3.fromRGB(255,255,255),
+            Material = Enum.Material.Neon,
+        }, container)
+        local gui = Instance.new("SurfaceGui")
+        gui.Face = Enum.NormalId.Front
+        gui.Adornee = sign
+        gui.AlwaysOnTop = true
+        gui.Parent = sign
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.fromScale(1,1); lbl.BackgroundTransparency = 1
+        lbl.Text = world.name
+        lbl.TextColor3 = Color3.fromRGB(255,255,255)
+        lbl.Font = Enum.Font.GothamBlack
+        lbl.TextScaled = true
+        lbl.TextStrokeTransparency = 0
+        lbl.Parent = gui
+    end
+
+    -- Random themed decoration props
+    local decorColors = theme.decorColors or {Color3.fromRGB(180,180,180)}
+    local mat = theme.groundMat or Enum.Material.SmoothPlastic
+    for _ = 1, 20 do
+        local x = math.random(-size/2 + 20, size/2 - 20)
+        local z = math.random(-size/2 + 20, size/2 - 20)
+        -- Stay clear of vendor zone (center) and breakables zone
+        if math.abs(x) < 30 and math.abs(z) < 30 then continue end
+
+        local kind = math.random(1, 3)
+        local color = decorColors[math.random(1, #decorColors)]
+        if kind == 1 then
+            -- Pillar / tree-like
+            local h = math.random(8, 20)
+            newPart({
+                Name = "Decor", Size = Vector3.new(3, h, 3),
+                Position = center + Vector3.new(x, h/2, z),
+                Color = color, Material = mat,
+            }, container)
+            newPart({
+                Name = "DecorTop", Size = Vector3.new(8, 8, 8),
+                Position = center + Vector3.new(x, h + 2, z),
+                Color = color, Material = mat,
+                Shape = Enum.PartType.Ball, CanCollide = false,
+            }, container)
+        elseif kind == 2 then
+            -- Boxy structure
+            newPart({
+                Name = "Decor", Size = Vector3.new(math.random(6,12), math.random(6,16), math.random(6,12)),
+                Position = center + Vector3.new(x, 5, z),
+                Color = color, Material = mat,
+            }, container)
+        else
+            -- Glowing crystal
+            newPart({
+                Name = "Crystal", Size = Vector3.new(4, math.random(8, 14), 4),
+                Position = center + Vector3.new(x, 6, z),
+                Color = color, Material = Enum.Material.Neon, CanCollide = false,
+                Orientation = Vector3.new(math.random(-30,30), math.random(0,360), math.random(-30,30)),
+            }, container)
+        end
+    end
+
+    -- Egg vendor pads (one per egg in this world)
+    local vendorPosY = 1
+    local vendorSpacing = 14
+    local eggsForWorld = {}
+    for _, egg in ipairs(EggDatabase.List) do
+        if egg.world == world.id then table.insert(eggsForWorld, egg) end
+    end
+    local startX = -((#eggsForWorld - 1) * vendorSpacing) / 2
+    for i, egg in ipairs(eggsForWorld) do
+        local pad = newPart({
+            Name = "EggVendor_" .. egg.id, Size = Vector3.new(8, 1, 8),
+            Position = center + Vector3.new(startX + (i - 1) * vendorSpacing, vendorPosY, -20),
+            Color = Color3.fromRGB(255, 220, 120), Material = Enum.Material.Neon,
+        }, container)
+        local eggIdVal = Instance.new("StringValue")
+        eggIdVal.Name = "EggId"; eggIdVal.Value = egg.id; eggIdVal.Parent = pad
+
+        -- Visual egg on top
+        newPart({
+            Name = "EggVisual", Size = Vector3.new(4, 5, 4),
+            Position = pad.Position + Vector3.new(0, 3.5, 0),
+            Color = Color3.fromRGB(255, 240, 200), Material = Enum.Material.Plastic,
+            Shape = Enum.PartType.Ball, CanCollide = false,
+        }, container)
+
+        -- Floating sign with egg name & cost
+        local sign = newPart({
+            Name = "VendorSign", Size = Vector3.new(8, 3, 0.2),
+            Position = pad.Position + Vector3.new(0, 8, 0),
+            Color = Color3.fromRGB(20, 20, 30), Material = Enum.Material.Neon,
+            CanCollide = false, Transparency = 0.2,
+        }, container)
+        local sg = Instance.new("SurfaceGui")
+        sg.Face = Enum.NormalId.Front; sg.Adornee = sign; sg.AlwaysOnTop = true; sg.Parent = sign
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.fromScale(1,1); lbl.BackgroundTransparency = 1
+        lbl.Text = egg.name .. "\n" .. Util.FormatNumber(egg.cost) .. " " .. egg.currency
+        lbl.TextColor3 = Color3.fromRGB(255, 230, 120)
+        lbl.Font = Enum.Font.GothamBold; lbl.TextScaled = true
+        lbl.TextStrokeTransparency = 0; lbl.Parent = sg
+    end
+
+    -- Teleport pads to neighboring worlds
+    local function makeTeleporterTo(targetWorld, sideX)
+        local color = (targetWorld.theme and targetWorld.theme.ground) or Color3.fromRGB(150, 150, 150)
+        local pad = newPart({
+            Name = "Teleport_" .. targetWorld.id,
+            Size = Vector3.new(10, 1, 10),
+            Position = center + Vector3.new(sideX, 1, size/2 - 16),
+            Color = color, Material = Enum.Material.Neon, Transparency = 0.2,
+        }, container)
+        local idVal = Instance.new("StringValue")
+        idVal.Name = "TargetWorld"; idVal.Value = targetWorld.id; idVal.Parent = pad
+
+        local beam = newPart({
+            Name = "Beam", Size = Vector3.new(10, 30, 10),
+            Position = pad.Position + Vector3.new(0, 15, 0),
+            Color = color, Material = Enum.Material.Neon,
+            CanCollide = false, Transparency = 0.7,
+        }, container)
+
+        local sign = newPart({
+            Name = "TeleportSign", Size = Vector3.new(10, 2, 0.2),
+            Position = pad.Position + Vector3.new(0, 6, 0),
+            Color = Color3.fromRGB(20, 20, 30), Material = Enum.Material.Neon,
+            CanCollide = false,
+        }, container)
+        local sg = Instance.new("SurfaceGui")
+        sg.Face = Enum.NormalId.Front; sg.Adornee = sign; sg.AlwaysOnTop = true; sg.Parent = sign
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.fromScale(1,1); lbl.BackgroundTransparency = 1
+        lbl.Text = "→ " .. targetWorld.name
+        lbl.TextColor3 = Color3.fromRGB(255,255,255)
+        lbl.Font = Enum.Font.GothamBold; lbl.TextScaled = true
+        lbl.TextStrokeTransparency = 0; lbl.Parent = sg
+    end
+
+    -- Previous world (left)
+    local prevWorld = WorldDatabase.List[world.order - 1]
+    if prevWorld then makeTeleporterTo(prevWorld, -size/2 + 16) end
+    -- Next world (right)
+    local nextWorld = WorldDatabase.List[world.order + 1]
+    if nextWorld then makeTeleporterTo(nextWorld, size/2 - 16) end
+
+    -- Spawn point per world (used by teleporters)
+    local spawn = newPart({
+        Name = "WorldSpawn", Size = Vector3.new(8, 1, 8),
+        Position = center + Vector3.new(0, 1, 30),
+        Color = Color3.fromRGB(80, 80, 100), Material = Enum.Material.Slate,
+        Transparency = 0.3,
+    }, container)
+    spawn.CanCollide = true
+
+    return container
+end
+
+function WorldBuilder:Init()
+    -- Top-level lighting setup
+    game:GetService("Lighting").Ambient = Color3.fromRGB(120,120,120)
+    game:GetService("Lighting").OutdoorAmbient = Color3.fromRGB(100,100,120)
+
+    -- Container for all worlds
+    local worldsFolder = Workspace:FindFirstChild("PetLegendsX_Worlds")
+    if not worldsFolder then
+        worldsFolder = Instance.new("Folder")
+        worldsFolder.Name = "PetLegendsX_Worlds"
+        worldsFolder.Parent = Workspace
+    end
+
+    -- Build each world (idempotent: skip if already built)
+    for _, world in ipairs(WorldDatabase.List) do
+        if not worldsFolder:FindFirstChild(world.id) then
+            self:BuildWorld(world, worldsFolder)
+        end
+    end
+
+    -- Move the default SpawnLocation to the Meadow spawn point
+    local meadow = WorldDatabase.GetById("Meadow")
+    if meadow then
+        local spawnPos = getWorldCenter(meadow) + Vector3.new(0, 4, 30)
+        -- Remove existing SpawnLocations and create one
+        for _, s in ipairs(Workspace:GetDescendants()) do
+            if s:IsA("SpawnLocation") then s:Destroy() end
+        end
+        local sp = Instance.new("SpawnLocation")
+        sp.Name = "PetLegendsX_Spawn"
+        sp.Anchored = true
+        sp.Size = Vector3.new(10, 1, 10)
+        sp.Position = spawnPos
+        sp.Color = Color3.fromRGB(120, 200, 120)
+        sp.Material = Enum.Material.Neon
+        sp.Parent = Workspace
+    end
+end
+
+-- =============================================================
+-- TELEPORT SERVICE
+-- =============================================================
+local TeleportService = {}
+
+function TeleportService:HandleTeleport(player, worldId)
+    local d = DataService:Get(player); if not d then return end
+    if not d.unlockedWorlds[worldId] then
+        Remotes.Notification:FireClient(player, "World " .. tostring(worldId) .. " is locked.")
+        return
+    end
+    local w = WorldDatabase.GetById(worldId); if not w then return end
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Rate limit teleports (3 sec)
+    local last = self._lastTp and self._lastTp[player] or 0
+    if os.clock() - last < 3 then return end
+    self._lastTp = self._lastTp or setmetatable({}, {__mode = "k"})
+    self._lastTp[player] = os.clock()
+
+    local pos = WorldBuilder:GetWorldCenter(worldId) + Vector3.new(0, 5, 30)
+    hrp.CFrame = CFrame.new(pos)
+
+    d.currentWorld = worldId
+    DataService:MarkDirty(player)
+    Remotes.Notification:FireClient(player, "Teleported to " .. w.name)
+end
+
+function TeleportService:Init()
+    Remotes.TeleportToWorld.OnServerEvent:Connect(function(plr, worldId)
+        self:HandleTeleport(plr, worldId)
+    end)
+end
+
+-- =============================================================
 -- BREAKING SERVICE
 -- =============================================================
 local BreakingService = {}
@@ -446,18 +743,49 @@ end
 local function makeBreakable(world, position)
     local model = Instance.new("Model")
     model.Name = "Breakable"
+    local wDef = WorldDatabase.GetById(world)
+    local theme = wDef and wDef.theme or {}
+    local color = (theme.decorColors and theme.decorColors[math.random(1, #theme.decorColors)])
+        or BrickColor.new("Bright orange").Color
     local part = Instance.new("Part")
     part.Name = "Hitbox"; part.Size = Vector3.new(6,6,6); part.Position = position
-    part.Anchored = true; part.BrickColor = BrickColor.new("Bright orange")
-    part.Material = Enum.Material.Wood; part.Parent = model
+    part.Anchored = true
+    part.Color = color
+    part.Material = theme.groundMat or Enum.Material.Wood
+    part.Parent = model
     model.PrimaryPart = part
+    -- Add a glowing core
+    local core = Instance.new("Part")
+    core.Name = "Core"
+    core.Size = Vector3.new(2.5, 2.5, 2.5)
+    core.Position = position
+    core.Anchored = true
+    core.CanCollide = false
+    core.Color = color
+    core.Material = Enum.Material.Neon
+    core.Shape = Enum.PartType.Ball
+    core.Parent = model
     local hpVal = Instance.new("NumberValue"); hpVal.Name = "HP"
-    local wDef = WorldDatabase.GetById(world)
     hpVal.Value = 100 * (wDef and wDef.coinMultiplier or 1); hpVal.Parent = model
     local maxHpVal = Instance.new("NumberValue"); maxHpVal.Name = "MaxHP"
     maxHpVal.Value = hpVal.Value; maxHpVal.Parent = model
     local worldVal = Instance.new("StringValue"); worldVal.Name = "World"
     worldVal.Value = world; worldVal.Parent = model
+
+    -- HP bar billboard
+    local bg = Instance.new("BillboardGui")
+    bg.Name = "HPBar"
+    bg.Adornee = part
+    bg.Size = UDim2.fromOffset(80, 12)
+    bg.StudsOffset = Vector3.new(0, 4, 0)
+    bg.AlwaysOnTop = true
+    bg.Parent = part
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromScale(1,1); frame.BackgroundColor3 = Color3.fromRGB(20,20,20); frame.BorderSizePixel = 0; frame.Parent = bg
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.fromScale(1,1); fill.BackgroundColor3 = Color3.fromRGB(255,80,80); fill.BorderSizePixel = 0; fill.Parent = frame
+
     return model
 end
 
@@ -470,7 +798,7 @@ function BreakingService:HandleHit(player, breakable)
     local char = player.Character; if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
     local hitbox = breakable:FindFirstChild("Hitbox") or breakable.PrimaryPart
-    if not hitbox or (hrp.Position - hitbox.Position).Magnitude > 25 then return end
+    if not hitbox or (hrp.Position - hitbox.Position).Magnitude > 32 then return end
     local now = os.clock()
     if (lastHit[player] or 0) + BREAK_COOLDOWN > now then return end
     lastHit[player] = now
@@ -478,6 +806,20 @@ function BreakingService:HandleHit(player, breakable)
     if not d.unlockedWorlds[worldVal.Value] then return end
     local stats = PetService:ComputePlayerStats(player)
     hp.Value -= stats.damage
+
+    -- Update HP bar fill
+    local maxHp = breakable:FindFirstChild("MaxHP")
+    if maxHp and hitbox then
+        local bar = hitbox:FindFirstChild("HPBar")
+        if bar then
+            local fill = bar:FindFirstChild("Frame") and bar.Frame:FindFirstChild("Fill")
+            if fill then
+                local pct = math.clamp(hp.Value / maxHp.Value, 0, 1)
+                fill.Size = UDim2.fromScale(pct, 1)
+            end
+        end
+    end
+
     if hp.Value <= 0 then
         local wDef = WorldDatabase.GetById(worldVal.Value)
         local coinReward = math.floor(10 * (wDef and wDef.coinMultiplier or 1) * stats.coinMul)
@@ -493,8 +835,11 @@ function BreakingService:Init()
     for _, world in ipairs(WorldDatabase.List) do
         local wf = ensureFolder(world.id, rootFolder)
         if #wf:GetChildren() == 0 then
+            local center = WorldBuilder:GetWorldCenter(world.id)
             for j = 1, 6 do
-                local pos = Vector3.new((world.order - 1) * 200 + j * 10 - 30, 5, 0)
+                local angle = (j / 6) * math.pi * 2
+                local r = 25
+                local pos = center + Vector3.new(math.cos(angle) * r, 5, math.sin(angle) * r)
                 local b = makeBreakable(world.id, pos); b.Parent = wf
             end
         end
@@ -506,11 +851,11 @@ function BreakingService:Init()
             for _, world in ipairs(WorldDatabase.List) do
                 local wf = rootFolder:FindFirstChild(world.id)
                 if wf and #wf:GetChildren() < 6 then
-                    for j = 1, 6 - #wf:GetChildren() do
-                        local pos = Vector3.new(
-                            (world.order - 1) * 200 + j * 10 - 30 + math.random(-3, 3),
-                            5, math.random(-10, 10)
-                        )
+                    local center = WorldBuilder:GetWorldCenter(world.id)
+                    for _ = 1, 6 - #wf:GetChildren() do
+                        local angle = math.random() * math.pi * 2
+                        local r = 18 + math.random() * 12
+                        local pos = center + Vector3.new(math.cos(angle) * r, 5, math.sin(angle) * r)
                         local b = makeBreakable(world.id, pos); b.Parent = wf
                     end
                 end
@@ -665,8 +1010,10 @@ end
 DataService:Init()
 GamepassService:Init()
 EggService:Init()
+WorldBuilder:Init()
 BreakingService:Init()
 RebirthService:Init()
+TeleportService:Init()
 AdminService:Init()
 
 -- Equip / unequip / lock / delete remotes
